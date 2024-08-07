@@ -25,7 +25,6 @@
  */
 @IsTest
 public with sharing class AsynchronousTest {
-
     @IsTest
     static void nextStepFuture_testUpdateAllNextStep() {
         // Create test data
@@ -43,7 +42,7 @@ public with sharing class AsynchronousTest {
 
         // Call the method to test between the startTest and stopTest methods
         Test.startTest();
-        //YOUR CODE HERE
+        NextStepFuture.updateAccountsOpportunities();//YOUR CODE HERE
         Test.stopTest();
 
         // Query the updated accounts and opportunities
@@ -62,11 +61,50 @@ public with sharing class AsynchronousTest {
     }
 
     @IsTest
-    static void nextStepFuture_testCreateDealAndUpdateRole() {        
-        Test.startTest();
-        NextStepFuture.createDealAndUpdateRole();
-        Test.stopTest();
+    static void nextStepFuture_testCreateDealAndUpdateRole() { 
 
+             // Create a UserRole for the test
+             UserRole testUserRole = new UserRole(
+                DeveloperName = 'TestRole',
+                Name = 'Test Role'
+            );
+            insert testUserRole;
+    
+            // Create a test user with the created UserRole
+            Profile profile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+            User testUser = new User(
+                Alias = 'testuser',
+                Email = 'testuser@example.com',
+                EmailEncodingKey = 'UTF-8',
+                LastName = 'Test',
+                LanguageLocaleKey = 'en_US',
+                LocaleSidKey = 'en_US',
+                ProfileId = profile.Id,
+                TimeZoneSidKey = 'America/Los_Angeles',
+                UserRoleId = testUserRole.Id,
+                Username = 'testuser887654@example.com'
+            );
+            insert testUser;
+
+            // Run the rest of the method as the test user
+            System.runAs(testUser) {
+            // Create test data
+            List<Account> testAccounts = new List<Account>();
+            for (Integer i = 0; i < 5; i++) {
+                testAccounts.add(new Account(Name = 'Test Account ' + i, Next_Step__c = 'Meeting in the future'));
+            }
+            insert testAccounts;
+    
+            List<Opportunity> testOpps = new List<Opportunity>();
+            for (Account acc : testAccounts) {
+                testOpps.add(new Opportunity(Name = 'Test Opp for ' + acc.Name, AccountId = acc.Id, CloseDate = Date.today(), StageName = 'Prospecting', NextStep = 'Meeting in the future'));
+            }
+            insert testOpps;            
+            
+                Test.startTest();
+                NextStepFuture.createDealAndUpdateRole();
+                Test.stopTest();
+            }
         // Due to the Mixed DML error, we need to test the insertBigDeal method
         Opportunity insertedOpportunity = [SELECT Id, Amount, Name, StageName, CloseDate FROM Opportunity WHERE Name = 'Big Deal' LIMIT 1];
         System.assertNotEquals(null, insertedOpportunity, 'Opportunity should have been created.');
@@ -111,13 +149,15 @@ public with sharing class AsynchronousTest {
             System.assertEquals(null, opp.NextStep, 'Opportunity NextStep field was updated to null.');
         }
     }
+   
 
     @IsTest
     static void nextStepBatch_testUpdateAllNextStep() {
         // Create test data
         List<Account> testAccounts = new List<Account>();
         for (Integer i = 0; i < 5; i++) {
-            testAccounts.add(new Account(Name = 'Test Account ' + i));
+            //testAccounts.add(new Account(Name = 'Test Account ' + i)); I had to modify this line to below:
+            testAccounts.add(new Account(Name = 'Test Account ' + i, Next_Step__c = 'Next Step ' + i));
         }
         insert testAccounts;
 
@@ -148,7 +188,8 @@ public with sharing class AsynchronousTest {
         }
     }
 
-    /*  //UNCOMMENT TEST METHODS BELOW ONCE THE NextStepSchedule class is implemented
+
+      //UNCOMMENT TEST METHODS BELOW ONCE THE NextStepSchedule class is implemented
         //No Changes should be required to the test methods/code below other than uncommenting them
         //Manually setup the scheduled job in Salesforce to run the NextStepSchedule class
     @IsTest
@@ -156,7 +197,8 @@ public with sharing class AsynchronousTest {
         // Create test data
         List<Account> testAccounts = new List<Account>();
         for (Integer i = 0; i < 5; i++) {
-            testAccounts.add(new Account(Name = 'Test Account ' + i));
+             //testAccounts.add(new Account(Name = 'Test Account ' + i)); I had to modify this line to below:
+             testAccounts.add(new Account(Name = 'Test Account ' + i, Next_Step__c = 'Next Step ' + i));
         }
         insert testAccounts;
 
@@ -189,5 +231,5 @@ public with sharing class AsynchronousTest {
             System.assertEquals('Batching the next meetings together.', opp.NextStep, 'Opportunity NextStep field was not updated correctly.');
         }
     }
-    */
 }
+   

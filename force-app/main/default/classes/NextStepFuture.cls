@@ -27,50 +27,73 @@ public with sharing class NextStepFuture {
      * Opportunity Next Step field is a standard field
      * Update the corresponding test class AsynchronousTest and test method nextStepFuture_testUpdateAllNextStep to cover test this method
      */
-    //[public | private ] [static] data_type method_name (input parameters) {
-    //  The body of the method
-    //}
+    @future
+    public static void updateAccountsOpportunities() {
+        // Query Accounts
+        List<Account> accountsToUpdate = [SELECT Id, Next_Step__c FROM Account];
+        
+        // Update the Next_Step__c field for all Accounts
+        for (Account acc : accountsToUpdate) {
+            acc.Next_Step__c = 'Meeting in the future';
+        }
+        
+        // Update Accounts in the database
+        if (!accountsToUpdate.isEmpty()) {
+            update accountsToUpdate;
+        }
 
-    /*
+        // Query Opportunities
+        List<Opportunity> opportunitiesToUpdate = [SELECT Id, NextStep FROM Opportunity];
+        
+        // Update the NextStep field for all Opportunities
+        for (Opportunity opp : opportunitiesToUpdate) {
+            opp.NextStep = 'Meeting in the future';
+        }
+        
+        // Update Opportunities in the database
+        if (!opportunitiesToUpdate.isEmpty()) {
+            update opportunitiesToUpdate;
+        }
+    }
+
+/*
     * Question 2
     * Update/Uncomment the template code to create a method
     * Create a method that inserts a big deal opportunity and updates the user role name to 'CRO'
     * Update the corresponding test class AsynchronousTest and test method nextStepFuture_testCreateDealAndUpdateRole to cover test this method
     */
-    //Mix DML Error happens when you try to perform DML operations on setup and non-setup objects in a single transaction.
+
     public static void createDealAndUpdateRole() {
+        // Insert the big deal opportunity
         Opportunity bigDeal = new Opportunity();
         insertBigDeal(bigDeal);
 
-        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' LIMIT 1];
-        updateUserRoleName(roles);
-    }
-
-    // Helper method to insert big deal
-    private static void insertBigDeal(Opportunity opp) {
-        opp.Amount = 1000000;
-        opp.Name = 'Big Deal';
-        opp.StageName = 'Closed Won'; 
-        opp.CloseDate = Date.today();
-        
-        insert opp;
-    }
-
-
-    // Helper method to update role name
-    private static void updateUserRoleName(UserRole[] roles){
-        UserRole role;
-        if (roles.isEmpty()) {
-            role = new UserRole();
-            role.portalType = 'None'; 
-            role.CaseAccessForAccountOwner = 'Edit'; 
-            // role.OpportunityAccessForAccountOwner = 'Edit'; //This may need to be uncommented depending on your orgs Organization Wide Defaults(OWD) settings. If you are receiving FIELD_INTEGRITY_EXCEPTION, field integrity exception: unknown (Opportunity access level below organization default): [unknown], uncomment this line.
-        } else {
-            role = roles[0];
+        // Fetch user role and update it asynchronously to avoid Mix DML error
+        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId()];
+        if (!roles.isEmpty()) {
+            UserRole userRole = roles[0];
+            updateUserRoleName(userRole.Id);
         }
-
-        role.Name = 'CRO';
-
-        upsert role;
     }
+
+   // Helper method to insert big deal
+   private static void insertBigDeal(Opportunity opp) {
+    opp.Amount = 1000000;
+    opp.Name = 'Big Deal';
+    opp.StageName = 'Closed Won'; 
+    opp.CloseDate = Date.today();
+    
+    insert opp;
+}
+
+    // @future method to update user role name
+    @future
+    private static void updateUserRoleName(Id userRoleId) {
+        UserRole userRole = [SELECT Id, Name FROM UserRole WHERE Id = :userRoleId LIMIT 1];
+        if (userRole != null) {
+            userRole.Name = 'CRO';
+            update userRole;
+        }
+    }
+ 
 }
